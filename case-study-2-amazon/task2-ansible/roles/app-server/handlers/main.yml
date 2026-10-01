@@ -1,0 +1,9 @@
+---
+# Handlers — only fire when notified by a task AND when that task reports 'changed'
+# This is key to idempotency: second run has no changes, so handlers do NOT fire
+
+- name: Restart app service
+  ansible.builtin.debug:
+    msg: "Config changed — would restart {{ app_name }} service on port {{ app_port }}"
+  # In production this would be: ansible.builtin.systemd: name={{ app_name }} state=restarted
+  # Using debug here since the service isn't installed in this demo environment

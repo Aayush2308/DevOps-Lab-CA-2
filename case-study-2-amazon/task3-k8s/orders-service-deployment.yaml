@@ -1,0 +1,75 @@
+---
+# Amazon Orders Service — Kubernetes Deployment
+# Theme: Independent deploy — changing this does NOT touch inventory or payments
+# Demonstrates Amazon two-pizza team independent release capability
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service
+  namespace: amazon
+  labels:
+    app: orders-service
+    team: orders-team
+    version: "1.0.0"
+  annotations:
+    description: "Amazon orders microservice — independently deployable by the orders team"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: orders-service
+        team: orders-team
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+
+      containers:
+        - name: orders-service
+          image: ghcr.io/aayush2308/amazon-orders-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8003
+              name: http
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          env:
+            - name: APP_ENV
+              value: "production"

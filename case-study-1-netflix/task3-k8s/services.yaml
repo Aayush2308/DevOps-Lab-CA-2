@@ -1,0 +1,34 @@
+---
+# Netflix Services — exposes catalog and recommendation pods inside the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: netflix
+  labels:
+    app: catalog-service
+spec:
+  selector:
+    app: catalog-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation-service
+  namespace: netflix
+  labels:
+    app: recommendation-service
+spec:
+  selector:
+    app: recommendation-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: 8002
+  type: ClusterIP

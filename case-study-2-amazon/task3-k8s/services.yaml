@@ -1,0 +1,54 @@
+---
+# Amazon Services — ClusterIP for all 3 independent microservices
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+  namespace: amazon
+  labels:
+    app: orders-service
+    team: orders-team
+spec:
+  selector:
+    app: orders-service
+  ports:
+    - name: http
+      port: 8003
+      targetPort: 8003
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: amazon
+  labels:
+    app: inventory-service
+    team: inventory-team
+spec:
+  selector:
+    app: inventory-service
+  ports:
+    - name: http
+      port: 8004
+      targetPort: 8004
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-service
+  namespace: amazon
+  labels:
+    app: payments-service
+    team: payments-team
+spec:
+  selector:
+    app: payments-service
+  ports:
+    - name: http
+      port: 8005
+      targetPort: 8005
+  type: ClusterIP

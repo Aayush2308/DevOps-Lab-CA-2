@@ -1,0 +1,17 @@
+---
+# Role defaults — overridden by inventory vars or playbook vars
+app_name: "devops-app"
+app_user: "devops"
+app_group: "devops"
+app_port: 8000
+app_env: "production"
+log_dir: "/var/log/devops"
+config_dir: "/etc/devops"
+
+# Packages to install on every managed host
+base_packages:
+  - git
+  - curl
+  - htop
+  - python3-pip
+  - net-tools

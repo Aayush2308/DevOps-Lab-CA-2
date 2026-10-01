@@ -1,0 +1,70 @@
+---
+# Amazon Payments Service — Independently deployable by payments team
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+  namespace: amazon
+  labels:
+    app: payments-service
+    team: payments-team
+    version: "1.0.0"
+  annotations:
+    description: "Amazon payments microservice — independently deployable"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: payments-service
+        team: payments-team
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+
+      containers:
+        - name: payments-service
+          image: ghcr.io/aayush2308/amazon-payments-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8005
+              name: http
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8005
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+
+          env:
+            - name: APP_ENV
+              value: "production"

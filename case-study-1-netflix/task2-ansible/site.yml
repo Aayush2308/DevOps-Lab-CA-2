@@ -1,0 +1,20 @@
+---
+# Netflix Ansible Playbook — Task 2: Configuration Management
+# Theme: Automates the server setup that would host Netflix microservices
+# Run: ansible-playbook site.yml -i inventory.ini
+# Idempotency: Run twice — second run shows 0 changed, all ok
+
+- name: Configure Netflix app server
+  hosts: app_servers
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: app-server
+      vars:
+        app_name: "{{ app_name | default('netflix-catalog') }}"
+        app_user: "{{ app_user | default('devops') }}"
+        log_dir: "{{ log_dir | default('/var/log/devops-netflix') }}"
+        config_dir: "{{ config_dir | default('/etc/devops-netflix') }}"
+        app_port: "{{ app_port | default(8001) }}"
+        app_env: "{{ app_env | default('production') }}"

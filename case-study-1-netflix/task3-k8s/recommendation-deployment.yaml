@@ -1,0 +1,74 @@
+---
+# Netflix Recommendation Service — Kubernetes Deployment
+# Theme: This service implements circuit-breaker fallback.
+# If catalog-service is killed by Chaos Monkey, THIS service degrades gracefully.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation-service
+  namespace: netflix
+  labels:
+    app: recommendation-service
+    version: "1.0.0"
+    track: resilience
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: recommendation-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: recommendation-service
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+
+      containers:
+        - name: recommendation-service
+          image: ghcr.io/aayush2308/netflix-recommendation-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+              name: http
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          env:
+            - name: CATALOG_SERVICE_URL
+              value: "http://catalog-service:8001"
+            - name: APP_ENV
+              value: "production"

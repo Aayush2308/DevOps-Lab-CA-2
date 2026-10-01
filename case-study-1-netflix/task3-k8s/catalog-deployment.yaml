@@ -1,0 +1,78 @@
+---
+# Netflix Catalog Service — Kubernetes Deployment
+# Demonstrates: rolling update strategy, resource limits, liveness/readiness probes
+# Task 3: Containerization and Orchestration (Netflix track)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: netflix
+  labels:
+    app: catalog-service
+    version: "1.0.0"
+    track: resilience
+  annotations:
+    description: "Netflix catalog microservice — stateless, designed to survive Chaos Monkey"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # At most 1 extra pod during update
+      maxUnavailable: 0  # Never drop below desired replicas (zero-downtime)
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+        version: "1.0.0"
+    spec:
+      # Non-root security context (mirrors Dockerfile USER appuser)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+
+      containers:
+        - name: catalog-service
+          image: ghcr.io/aayush2308/netflix-catalog-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+              name: http
+
+          # Resource limits — prevent one service from starving others
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          # Liveness probe — if this fails, K8s restarts the container (self-healing)
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+            timeoutSeconds: 5
+
+          # Readiness probe — pod only receives traffic when truly ready
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 3
+
+          env:
+            - name: APP_ENV
+              value: "production"

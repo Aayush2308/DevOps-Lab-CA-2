@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: netflix
+  labels:
+    case-study: "netflix"
+    track: "resilience"
+    managed-by: "devops-lab-ca2"

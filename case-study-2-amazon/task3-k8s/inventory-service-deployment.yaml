@@ -1,0 +1,70 @@
+---
+# Amazon Inventory Service — Independently deployable by inventory team
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: amazon
+  labels:
+    app: inventory-service
+    team: inventory-team
+    version: "1.0.0"
+  annotations:
+    description: "Amazon inventory microservice — independently deployable"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+        team: inventory-team
+        version: "1.0.0"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+
+      containers:
+        - name: inventory-service
+          image: ghcr.io/aayush2308/amazon-inventory-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8004
+              name: http
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+
+          env:
+            - name: APP_ENV
+              value: "production"
