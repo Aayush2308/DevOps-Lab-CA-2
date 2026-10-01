@@ -1,38 +1,11 @@
 ---
-# Tasks for the app-server role
-# Every task is IDEMPOTENT: running twice produces identical results
-# (Ansible guarantees this via state: present, creates:, etc.)
+# roles/app-server/tasks/main.yml
+# Demonstrates idempotency. We use user-level paths to avoid requiring sudo.
 
-- name: Ensure base packages are installed
-  ansible.builtin.apt:
-    name: "{{ base_packages }}"
-    state: present
-    update_cache: true
-    cache_valid_time: 3600   # Don't re-run apt-get update if < 1hr old (idempotency)
-  tags: packages
-
-- name: Ensure devops group exists
-  ansible.builtin.group:
-    name: "{{ app_group }}"
-    state: present
-  tags: users
-
-- name: Ensure devops user exists (non-login, system account)
-  ansible.builtin.user:
-    name: "{{ app_user }}"
-    group: "{{ app_group }}"
-    shell: /bin/bash
-    create_home: true
-    comment: "DevOps service account — managed by Ansible"
-    state: present
-  tags: users
-
-- name: Ensure log directory exists with correct ownership
+- name: Ensure application log directory exists
   ansible.builtin.file:
     path: "{{ log_dir }}"
     state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
     mode: "0755"
   tags: directories
 
@@ -40,8 +13,6 @@
   ansible.builtin.file:
     path: "{{ config_dir }}"
     state: directory
-    owner: root
-    group: "{{ app_group }}"
     mode: "0750"
   tags: directories
 
@@ -49,27 +20,7 @@
   ansible.builtin.template:
     src: app.conf.j2
     dest: "{{ config_dir }}/app.conf"
-    owner: root
-    group: "{{ app_group }}"
     mode: "0640"
     backup: true
   notify: Restart app service   # Handler fires only if this task changes something
   tags: config
-
-- name: Deploy message of the day
-  ansible.builtin.copy:
-    src: motd.txt
-    dest: /etc/motd
-    owner: root
-    group: root
-    mode: "0644"
-  tags: config
-
-- name: Ensure /var/log/devops symlink exists for monitoring
-  ansible.builtin.file:
-    src: "{{ log_dir }}"
-    dest: /var/log/devops
-    state: link
-    force: false
-  tags: directories
-  ignore_errors: true

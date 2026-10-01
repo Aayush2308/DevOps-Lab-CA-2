@@ -6,15 +6,15 @@
 
 - name: Configure Netflix app server
   hosts: app_servers
-  become: true
+  become: false
   gather_facts: true
 
   roles:
     - role: app-server
       vars:
         app_name: "{{ app_name | default('netflix-catalog') }}"
-        app_user: "{{ app_user | default('devops') }}"
-        log_dir: "{{ log_dir | default('/var/log/devops-netflix') }}"
-        config_dir: "{{ config_dir | default('/etc/devops-netflix') }}"
+        app_user: "{{ ansible_user_id }}"
+        log_dir: "/tmp/devops-netflix-logs"
+        config_dir: "/tmp/devops-netflix-config"
         app_port: "{{ app_port | default(8001) }}"
         app_env: "{{ app_env | default('production') }}"

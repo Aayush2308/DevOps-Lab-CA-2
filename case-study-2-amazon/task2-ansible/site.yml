@@ -6,30 +6,30 @@
 
 - name: Configure Amazon app server (orders team)
   hosts: app_servers
-  become: true
+  become: false
   gather_facts: true
 
   roles:
     - role: app-server
       vars:
         app_name: "amazon-orders"
-        app_user: "{{ app_user | default('devops') }}"
-        log_dir: "{{ log_dir | default('/var/log/devops-amazon') }}"
-        config_dir: "{{ config_dir | default('/etc/devops-amazon') }}"
+        app_user: "{{ ansible_user_id }}"
+        log_dir: "/tmp/devops-amazon-logs"
+        config_dir: "/tmp/devops-amazon-config"
         app_port: 8003
         app_env: "{{ app_env | default('production') }}"
 
 - name: Configure Amazon app server (inventory team)
   hosts: app_servers
-  become: true
+  become: false
   gather_facts: true
 
   roles:
     - role: app-server
       vars:
         app_name: "amazon-inventory"
-        app_user: "{{ app_user | default('devops') }}"
-        log_dir: "{{ log_dir | default('/var/log/devops-amazon') }}"
-        config_dir: "{{ config_dir | default('/etc/devops-amazon') }}"
+        app_user: "{{ ansible_user_id }}"
+        log_dir: "/tmp/devops-amazon-logs"
+        config_dir: "/tmp/devops-amazon-config"
         app_port: 8004
         app_env: "{{ app_env | default('production') }}"

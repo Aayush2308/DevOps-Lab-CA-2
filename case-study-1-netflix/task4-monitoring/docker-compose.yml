@@ -10,7 +10,7 @@ services:
   # ── Netflix Catalog Service ────────────────────────────────────
   catalog-service:
     build:
-      context: ../../app/catalog-service
+      context: ../app/catalog-service
       dockerfile: Dockerfile
     container_name: netflix-catalog
     ports:
@@ -26,7 +26,7 @@ services:
   # ── Netflix Recommendation Service ────────────────────────────
   recommendation-service:
     build:
-      context: ../../app/recommendation-service
+      context: ../app/recommendation-service
       dockerfile: Dockerfile
     container_name: netflix-recommendation
     ports:

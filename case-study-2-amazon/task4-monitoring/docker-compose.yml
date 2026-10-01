@@ -6,7 +6,7 @@ version: "3.8"
 services:
   orders-service:
     build:
-      context: ../../app/orders-service
+      context: ../app/orders-service
       dockerfile: Dockerfile
     container_name: amazon-orders
     ports:
@@ -15,7 +15,7 @@ services:
 
   inventory-service:
     build:
-      context: ../../app/inventory-service
+      context: ../app/inventory-service
       dockerfile: Dockerfile
     container_name: amazon-inventory
     ports:
@@ -24,7 +24,7 @@ services:
 
   payments-service:
     build:
-      context: ../../app/payments-service
+      context: ../app/payments-service
       dockerfile: Dockerfile
     container_name: amazon-payments
     ports:
