@@ -1,0 +1,63 @@
+version: "3.8"
+
+# Amazon Monitoring Stack — Task 4
+# 3 services + Prometheus + Grafana
+
+services:
+  orders-service:
+    build:
+      context: ../../app/orders-service
+      dockerfile: Dockerfile
+    container_name: amazon-orders
+    ports:
+      - "8003:8003"
+    networks: [amazon-net]
+
+  inventory-service:
+    build:
+      context: ../../app/inventory-service
+      dockerfile: Dockerfile
+    container_name: amazon-inventory
+    ports:
+      - "8004:8004"
+    networks: [amazon-net]
+
+  payments-service:
+    build:
+      context: ../../app/payments-service
+      dockerfile: Dockerfile
+    container_name: amazon-payments
+    ports:
+      - "8005:8005"
+    networks: [amazon-net]
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: amazon-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - amazon-prometheus-data:/prometheus
+    networks: [amazon-net]
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: amazon-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=devopslab
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - amazon-grafana-data:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [amazon-net]
+
+volumes:
+  amazon-prometheus-data:
+  amazon-grafana-data:
+
+networks:
+  amazon-net:
+    driver: bridge

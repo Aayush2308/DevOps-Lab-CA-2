@@ -1,0 +1,85 @@
+version: "3.8"
+
+# Netflix Monitoring Stack — Task 4
+# Runs: Prometheus + Grafana + both Netflix services
+# Usage: docker-compose up -d
+# Prometheus: http://localhost:9090
+# Grafana:    http://localhost:3000 (admin/devopslab)
+
+services:
+  # ── Netflix Catalog Service ────────────────────────────────────
+  catalog-service:
+    build:
+      context: ../../app/catalog-service
+      dockerfile: Dockerfile
+    container_name: netflix-catalog
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - netflix-net
+
+  # ── Netflix Recommendation Service ────────────────────────────
+  recommendation-service:
+    build:
+      context: ../../app/recommendation-service
+      dockerfile: Dockerfile
+    container_name: netflix-recommendation
+    ports:
+      - "8002:8002"
+    environment:
+      - CATALOG_SERVICE_URL=http://catalog-service:8001
+    depends_on:
+      - catalog-service
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - netflix-net
+
+  # ── Prometheus ────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: netflix-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    networks:
+      - netflix-net
+
+  # ── Grafana ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: netflix-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=devopslab
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/netflix-dashboard.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - netflix-net
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  netflix-net:
+    driver: bridge
