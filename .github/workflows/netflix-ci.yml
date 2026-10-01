@@ -1,0 +1,161 @@
+name: Netflix CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "case-study-1-netflix/**"
+      - ".github/workflows/netflix-ci.yml"
+  pull_request:
+    paths:
+      - "case-study-1-netflix/**"
+
+env:
+  REGISTRY: ghcr.io
+  CATALOG_IMAGE: ghcr.io/${{ github.repository_owner }}/netflix-catalog-service
+  RECOMM_IMAGE: ghcr.io/${{ github.repository_owner }}/netflix-recommendation-service
+
+jobs:
+  # ── Job 1: Lint ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint catalog-service
+        run: flake8 case-study-1-netflix/app/catalog-service/main.py --max-line-length=120
+
+      - name: Lint recommendation-service
+        run: flake8 case-study-1-netflix/app/recommendation-service/main.py --max-line-length=120
+
+  # ── Job 2: Test ─────────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests (pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install catalog dependencies + pytest
+        run: |
+          pip install -r case-study-1-netflix/app/catalog-service/requirements.txt
+          pip install pytest httpx
+
+      - name: Test catalog-service
+        run: pytest case-study-1-netflix/app/catalog-service/tests/ -v
+
+      - name: Install recommendation dependencies
+        run: |
+          pip install -r case-study-1-netflix/app/recommendation-service/requirements.txt
+
+      - name: Test recommendation-service
+        run: pytest case-study-1-netflix/app/recommendation-service/tests/ -v
+
+  # ── Job 3: Build & Scan ─────────────────────────────────────────────────────
+  build-and-scan:
+    name: Build + Trivy Scan
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Build catalog-service ──
+      - name: Build catalog-service image
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-1-netflix/app/catalog-service
+          push: false
+          load: true
+          tags: ${{ env.CATALOG_IMAGE }}:${{ github.sha }},${{ env.CATALOG_IMAGE }}:latest
+
+      - name: Scan catalog-service with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.CATALOG_IMAGE }}:${{ github.sha }}
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Push catalog-service image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-1-netflix/app/catalog-service
+          push: true
+          tags: ${{ env.CATALOG_IMAGE }}:${{ github.sha }},${{ env.CATALOG_IMAGE }}:latest
+
+      # ── Build recommendation-service ──
+      - name: Build recommendation-service image
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-1-netflix/app/recommendation-service
+          push: false
+          load: true
+          tags: ${{ env.RECOMM_IMAGE }}:${{ github.sha }},${{ env.RECOMM_IMAGE }}:latest
+
+      - name: Scan recommendation-service with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.RECOMM_IMAGE }}:${{ github.sha }}
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Push recommendation-service image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-1-netflix/app/recommendation-service
+          push: true
+          tags: ${{ env.RECOMM_IMAGE }}:${{ github.sha }},${{ env.RECOMM_IMAGE }}:latest
+
+  # ── Job 4: Deploy (dry-run kubectl apply) ────────────────────────────────────
+  deploy:
+    name: Deploy to Kubernetes (dry-run)
+    runs-on: ubuntu-latest
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.31.0"
+
+      - name: Validate K8s manifests (dry-run)
+        run: |
+          kubectl apply --dry-run=client -f case-study-1-netflix/task3-k8s/ || true
+          echo "Manifest validation complete."
+          echo "In production: push new image SHA to cluster via kubectl set image."

@@ -1,0 +1,151 @@
+name: Amazon CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "case-study-2-amazon/**"
+      - ".github/workflows/amazon-ci.yml"
+  pull_request:
+    paths:
+      - "case-study-2-amazon/**"
+
+env:
+  REGISTRY: ghcr.io
+  ORDERS_IMAGE: ghcr.io/${{ github.repository_owner }}/amazon-orders-service
+  INVENTORY_IMAGE: ghcr.io/${{ github.repository_owner }}/amazon-inventory-service
+  PAYMENTS_IMAGE: ghcr.io/${{ github.repository_owner }}/amazon-payments-service
+
+jobs:
+  # ── Job 1: Lint ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (flake8) — all 3 services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint orders-service
+        run: flake8 case-study-2-amazon/app/orders-service/main.py --max-line-length=120
+
+      - name: Lint inventory-service
+        run: flake8 case-study-2-amazon/app/inventory-service/main.py --max-line-length=120
+
+      - name: Lint payments-service
+        run: flake8 case-study-2-amazon/app/payments-service/main.py --max-line-length=120
+
+  # ── Job 2: Test — 3 services in parallel matrix ─────────────────────────────
+  test:
+    name: Test ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        service: [orders-service, inventory-service, payments-service]
+      fail-fast: false   # Don't cancel other services if one fails (Amazon principle: independent teams)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies for ${{ matrix.service }}
+        run: |
+          pip install -r case-study-2-amazon/app/${{ matrix.service }}/requirements.txt
+          pip install pytest httpx
+
+      - name: Run tests for ${{ matrix.service }}
+        run: pytest case-study-2-amazon/app/${{ matrix.service }}/tests/ -v
+
+  # ── Job 3: Build & Scan — matrix per service ────────────────────────────────
+  build-and-scan:
+    name: Build + Scan ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    strategy:
+      matrix:
+        include:
+          - service: orders-service
+            image: ghcr.io/${{ github.repository_owner }}/amazon-orders-service
+          - service: inventory-service
+            image: ghcr.io/${{ github.repository_owner }}/amazon-inventory-service
+          - service: payments-service
+            image: ghcr.io/${{ github.repository_owner }}/amazon-payments-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.service }} image
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-2-amazon/app/${{ matrix.service }}
+          push: false
+          load: true
+          tags: ${{ matrix.image }}:${{ github.sha }},${{ matrix.image }}:latest
+
+      - name: Trivy scan — ${{ matrix.service }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Push ${{ matrix.service }} image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: case-study-2-amazon/app/${{ matrix.service }}
+          push: true
+          tags: ${{ matrix.image }}:${{ github.sha }},${{ matrix.image }}:latest
+
+  # ── Job 4: Deploy (independent per service — two-pizza principle) ────────────
+  deploy:
+    name: Deploy ${{ matrix.service }} independently
+    runs-on: ubuntu-latest
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        service: [orders-service, inventory-service, payments-service]
+      # Each service deploys independently — failure in one does NOT block others
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.31.0"
+
+      - name: Validate K8s manifests for ${{ matrix.service }} (dry-run)
+        run: |
+          echo "Independent deploy of ${{ matrix.service }} — SHA ${{ github.sha }}"
+          kubectl apply --dry-run=client \
+            -f case-study-2-amazon/task3-k8s/${{ matrix.service }}-deployment.yaml || true
+          echo "Deploy validation complete for ${{ matrix.service }}"

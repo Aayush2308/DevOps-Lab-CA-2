@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Secrets / environment
+.env
+*.env.local
+*.pem
+*.key
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Ansible
+*.retry
+ansible/.vault_pass
+
+# Grafana / Prometheus data
+grafana-data/
+prometheus-data/
+
+# Reports / temp
+*.tmp
+evidence/*.txt.bak
+
+# Word doc (not part of repo)
+*.docx
