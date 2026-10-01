@@ -1,4 +1,4 @@
-# DevOps Lab CA-II — Aayush Joshi
+# DevOps Lab CA-II - Aayush Joshi
 
 [![Netflix CI](https://github.com/Aayush2308/DevOps-Lab-CA-2/actions/workflows/netflix-ci.yml/badge.svg)](https://github.com/Aayush2308/DevOps-Lab-CA-2/actions/workflows/netflix-ci.yml)
 [![Amazon CI](https://github.com/Aayush2308/DevOps-Lab-CA-2/actions/workflows/amazon-ci.yml/badge.svg)](https://github.com/Aayush2308/DevOps-Lab-CA-2/actions/workflows/amazon-ci.yml)
@@ -9,10 +9,10 @@
 |---|---|
 | **Name** | Aayush Joshi |
 | **PRN** | 23070122008 |
-| **Batch** | 2023–2027 |
+| **Batch** | 2023-2027 |
 | **Branch** | CSE - A |
 | **Institute** | Symbiosis Institute of Technology (SIT), Pune |
-| **Assessment** | DevOps Lab — CA-II |
+| **Assessment** | DevOps Lab - CA-II |
 
 ---
 
@@ -31,19 +31,19 @@
 **Question:** In 2008 a database corruption stopped DVD shipments for three days and exposed the fragility of Netflix's monolith. What broke, and how did microservices + Chaos Engineering restore resilience and scale?
 
 ### Answer 1: Context
-In 2008, Netflix was primarily a DVD-by-mail service. Their entire architecture—UI, sign-up, billing, inventory, and shipping—was a monolithic application backed by a single Oracle database located in a single data center. In August 2008, a severe database corruption occurred, bringing down the entire operation and halting DVD shipments for three days. With the launch of their streaming service in 2007, it became clear that the existing monolithic architecture could not scale globally to meet the bursty nature of streaming traffic.
+Back in 2008, Netflix was mainly just shipping DVDs by mail. Everything they did, like the UI, billing, and shipping, was crammed into one giant monolithic application running on a single Oracle database in one data center. When that database got corrupted in August 2008, it took down their entire operation and stopped DVD shipments for three whole days. With streaming starting to pick up around that time, they quickly realized this monolithic setup was never going to handle massive, unpredictable internet traffic.
 
 ### 1. Problems with the Monolithic Design
-- **Single Point of Failure:** Because billing, browsing, and fulfillment shared a single database, a single fault took down the entire revenue-generating system for three days.
-- **Slow, Risky Releases:** Any minor change required rebuilding and redeploying the entire application. Teams were tightly coupled, releases were batched, and a single bug forced a full rollback.
-- **Scale-Up, Not Scale-Out:** Scaling meant buying larger servers rather than adding more parallel servers. Physical provisioning took weeks, whereas streaming demand was poised to grow exponentially.
-- **Manual, Untested Recovery:** Failover processes were ad-hoc and rarely drilled, leading to high Mean Time To Recovery (MTTR).
+- **Single Point of Failure:** Because everything shared one database, a single glitch could bring down the entire company.
+- **Slow, Risky Releases:** Any small code change meant they had to rebuild the entire application. Teams were stuck waiting for each other, and one bug could ruin the whole release.
+- **Hard to Scale:** If they wanted to handle more traffic, they had to buy bigger, more expensive servers instead of just adding more regular servers side by side.
+- **Manual Recovery:** They didn't really practice failovers, so when things actually broke, it took them way too long to fix it.
 
 ### 2. How Netflix Fixed It: Microservices + DevOps + Chaos Engineering
-Netflix opted against a simple "lift-and-shift" and decided to rebuild a cloud-native architecture on AWS.
-1.  **Microservices Architecture:** They split the monolith into hundreds of independent microservices (Recommendations, Billing, Search, etc.), each with its own datastore (Cassandra/DynamoDB). A billing fault now gracefully degrades without stopping streaming.
-2.  **DevOps & Automation:** Netflix adopted a "You build it, you run it" culture. Teams used Spinnaker for continuous delivery and automated pipelines for safe rollbacks.
-3.  **Chaos Engineering:** They introduced Chaos Monkey (2010), which randomly terminates production instances to force teams to build resilient, auto-healing systems. 
+Netflix didn't just move their old code to the cloud. They totally rebuilt it on AWS using microservices and Chaos Engineering.
+1.  **Microservices:** They broke the giant app into hundreds of smaller, independent services (like billing, search, recommendations). This way, if the billing service crashes, people can still watch movies.
+2.  **DevOps Culture:** They told teams "you build it, you run it." Engineers started using automated pipelines to deploy their own code safely.
+3.  **Chaos Engineering:** They created a tool called Chaos Monkey that literally turns off production servers at random during the day. This forced the engineers to build systems that heal themselves automatically. 
 
 ```mermaid
 graph TD
@@ -67,7 +67,7 @@ graph TD
 *Figure 1. Monolith with a single point of failure vs decoupled resilient microservices.*
 
 ### 3. Effect on Resilience and Scalability
-By embracing this model, Netflix achieved **99.99% availability**. Server provisioning went from weeks to minutes, enabling them to expand to 130+ countries globally. Memberships grew exponentially, and the architecture now smoothly handles over 1 billion API requests per day.
+Because they did all this, Netflix now hits 99.99% uptime. They can spin up thousands of servers in minutes instead of waiting weeks. They went from a single US data center to serving 130+ countries seamlessly, handling billions of API requests every day.
 
 #### Table 1: Netflix Before vs. After
 | Dimension | Monolith Era (~2008) | Microservices + AWS + Chaos Era |
@@ -84,18 +84,18 @@ By embracing this model, Netflix achieved **99.99% availability**. Server provis
 **Question:** In 2001, Amazon was a massive C++ monolith called "Obidos." How did Jeff Bezos' mandate for decoupled APIs and the "Two-Pizza Team" rule solve their release bottlenecks?
 
 ### Answer 2: Context
-In 2001, Amazon’s e-commerce platform was powered by a giant monolithic C++ application named "Obidos." As the company grew, development slowed to a crawl. Thousands of developers were modifying the same codebase, resulting in merge conflicts, long testing cycles, and bottlenecked releases. To fix this, Amazon embarked on a radical architectural and organizational shift.
+Around 2001, Amazon was running on this massive C++ monolith called 'Obidos'. As they hired more developers, everything just slowed down. Everyone was trying to edit the same codebase, which led to constant merge conflicts and super slow releases. They knew they had to change how they worked if they wanted to keep growing.
 
 ### 1. Problems with the Obidos Monolith
-- **Merge Hell:** Thousands of engineers working on one massive codebase caused constant integration conflicts.
-- **Release Bottlenecks:** A single deployment required massive coordination. If one team’s code failed, the entire release was rolled back, blocking all other teams.
-- **Tight Coupling:** Databases were shared across different domains. The inventory system could directly query the orders database, creating hidden dependencies that broke easily during updates.
+- **Merge Hell:** With thousands of engineers touching the same code, integrating new features was a nightmare.
+- **Release Bottlenecks:** To push an update, they had to coordinate massive releases. If just one team messed up, the whole release had to be rolled back.
+- **Tight Coupling:** The databases were all tangled together. For instance, the inventory team would just query the orders database directly. If someone changed a database column, it would silently break another team's code.
 
 ### 2. How Amazon Fixed It: APIs + Two-Pizza Teams
-Jeff Bezos issued a famous mandate (the "Bezos API Mandate") that forced a radical decoupling of both technology and people.
-1.  **Service-Oriented Architecture (SOA):** All teams were required to expose their data and functionality strictly through service interfaces (APIs). Direct database reads by other teams were banned.
-2.  **Two-Pizza Teams:** Teams were reorganized to be small enough to be fed by two pizzas (6-10 people). Each team had full ownership of a specific microservice (e.g., the Buy button, Tax calculation).
-3.  **CI/CD Pipeline Automation:** Amazon built Apollo, an automated deployment system that allowed each team to deploy their service independently without coordinating with a central release manager.
+Jeff Bezos basically stepped in and gave an ultimatum that forced everyone to decouple their code and their teams.
+1.  **Service-Oriented Architecture (SOA):** Bezos mandated that teams could only communicate with each other through clear APIs. No more reading another team's database directly.
+2.  **Two-Pizza Teams:** He reorganized the company into small, independent teams that could be fed with just two pizzas (around 6 to 10 people). Each team completely owned their own microservice.
+3.  **Pipeline Automation:** Amazon built an internal system called Apollo to automate deployments, meaning these small teams could push their own code whenever they wanted without asking for permission.
 
 ```mermaid
 graph TD
@@ -121,7 +121,7 @@ graph TD
 *Figure 2. Transition from a coupled monolith to independent API-driven Two-Pizza teams.*
 
 ### 3. Effect on Release Speed and Innovation
-The transformation was staggering. By decoupling teams and services, Amazon went from a slow, monolithic release cycle to deploying code every **11.6 seconds** (by 2011). Teams could innovate rapidly, leading directly to the creation of AWS as they externalized their internal API infrastructure.
+The results were crazy. By breaking the monolith and giving power to these small teams, Amazon was eventually deploying new code every 11.6 seconds. This massive shift in architecture is also what eventually led them to launch AWS.
 
 #### Table 2: Amazon Before vs. After
 | Dimension | Obidos Era (2001) | Microservices Era (Post-SOA) |
