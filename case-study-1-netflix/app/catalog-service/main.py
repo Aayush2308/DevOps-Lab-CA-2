@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from typing import Optional
 import time
-import random
 
 app = FastAPI(
     title="Netflix Catalog Service",
